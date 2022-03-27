@@ -1,0 +1,152 @@
+--View the two data sets
+
+SELECT *
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
+order by 3, 4
+
+SELECT *
+FROM `coviddeathsvaccinations.CovidVaccinations.CovidVaccinations`
+order by 3, 4
+
+SELECT location, date, total_cases, new_cases, total_deaths, population
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
+order by 3, 4
+
+--FOCUS ON DEATHS DATASET
+--Looking at total cases vs. total deaths, shows likelihood of dying from contracting COVID, specifically in the US.
+
+SELECT location, date, total_cases, total_deaths, (total_deaths/total_cases)*100 as death_percentage
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
+WHERE location='United States'
+order by 1,2
+
+--Looking at total cases vs. population. Shows what percentage of the population in the US was infected with COVID.
+
+SELECT location, date, total_cases, population, (total_cases/population)*100 as infected_percentage
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
+WHERE location='United States'
+order by 1,2
+
+--Looking at locations with highest infection rate compared to population
+
+SELECT location, population, MAX(total_cases) as highest_infection_count, MAX(total_cases/population)*100 as infected_percentage
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
+GROUP BY location, population
+order by infected_percentage DESC
+
+--Highest infection percentage top 5? Faroe Islands, Andorra, Denmark, Gibraltar, and Slovenia
+
+--Showing locations with highest death rates:
+
+SELECT location, population, MAX(total_deaths) as highest_death_count, MAX(total_deaths/population)*100 as death_percentage
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
+GROUP BY location, population
+order by death_percentage DESC
+
+--Top 5: Peru, Bulgaria, Bosnia & Herzegovina, Hungary, North Macedonia
+
+--Showing countries with highest total deaths:
+
+SELECT location, MAX(cast(total_deaths as int)) as highest_death_count
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
+WHERE continent is not null
+GROUP BY location
+order by highest_death_count DESC
+
+--Top 5 countries: United States, Brazil, India, Russia, Mexico
+
+--Showing continents with highest total deaths:
+
+SELECT location, MAX(cast(total_deaths as int)) as highest_death_count
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
+WHERE continent is null
+GROUP BY location
+order by highest_death_count DESC
+
+Top continent: Europe
+
+--Global data
+--Showing worldwide cases, deaths, and death percentage over time
+
+SELECT date, SUM(new_cases) as total_new_cases, SUM(new_deaths) as total_new_deaths, SUM(new_deaths)/SUM(new_cases)*100 as total_death_percentage
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
+WHERE continent is not null 
+Group by date
+order by 1, 2
+
+--Showing current figure of total cases, deaths, and death percentage
+
+SELECT SUM(new_cases) as total_new_cases, SUM(new_deaths) as total_new_deaths, SUM(new_deaths)/SUM(new_cases)*100 as total_death_percentage
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
+WHERE continent is not null 
+order by 1, 2
+
+Total worldwide cases: 432847624. Total deaths: 5917680. Total death percentage: 
+1.3671508567643196
+
+--Joining the two datasets
+
+SELECT *
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths` as dea
+JOIN `coviddeathsvaccinations.CovidVaccinations.CovidVaccinations` as vac
+    ON dea.location = vac.location
+    and dea.date = vac.date
+
+--Looking at total population vs. vaccinations
+
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths` as dea
+JOIN `coviddeathsvaccinations.CovidVaccinations.CovidVaccinations` as vac
+    ON dea.location = vac.location
+    and dea.date = vac.date
+WHERE dea.continent is not null
+order by 2, 3
+
+--Create running cumulative vaccination count by country
+
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations, SUM(vac.new_vaccinations) OVER (partition by dea.location ORDER BY dea.location, dea.date) as cumulative_new_vaccinations
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths` as dea
+JOIN `coviddeathsvaccinations.CovidVaccinations.CovidVaccinations` as vac
+    ON dea.location = vac.location
+    and dea.date = vac.date
+WHERE dea.continent is not null
+order by 2, 3
+
+--Using CTE to find running vaccination percentage by country (first try, something's up with this, won't recognize continent as a name)
+
+With PopulationVsVaccination as (select continent, location, date, population, new_vaccinations, cumulative_new_vaccinations)
+(
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations, SUM(vac.new_vaccinations) OVER (partition by dea.location ORDER BY dea.location, dea.date) as cumulative_new_vaccinations
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths` as dea
+JOIN `coviddeathsvaccinations.CovidVaccinations.CovidVaccinations` as vac
+    ON dea.location = vac.location
+    and dea.date = vac.date
+WHERE dea.continent is not null
+)
+SELECT *, (cumulative_new_vaccinations/population)*100 as cumulative_vaccination_percentage
+FROM PopulationVsVaccination
+
+--Using a temp table for same function (running vaccination percentage by country)
+
+DROP TABLE if exists PercentPopulationVaccinated
+CREATE TABLE PercentPopulationVaccinated
+(
+Continent nvarchar (255),
+Location nvarchar(255),
+Date datetime,
+Population numeric,
+new_vaccinations numeric,
+cumulative_new_vaccinations numeric
+)
+INSERT INTO PercentPopulationVaccinated
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations, 
+    SUM(vac.new_vaccinations) OVER (partition by dea.location ORDER BY dea.location, dea.date) 
+    as cumulative_new_vaccinations
+FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths` as dea
+JOIN `coviddeathsvaccinations.CovidVaccinations.CovidVaccinations` as vac
+    ON dea.location = vac.location
+    and dea.date = vac.date
+WHERE dea.continent is not null
+
+SELECT *, (cumulative_new_vaccinations/population)*100 as cumulative_vaccination_percentage
+FROM PercentPopulationVaccinated
