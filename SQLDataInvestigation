@@ -1,4 +1,7 @@
---View the two data sets
+--This project is based on global COVID deaths and vaccinations data from Our World In Data, date range February 24, 2020-February 26, 2022.
+--View my tableau visualization of some of these queries: https://public.tableau.com/views/COVIDDeathsInfectionsDataendingFeb262022/Dashboard1?:language=en-US&:display_count=n&:origin=viz_share_link
+
+--View the two data sets:
 
 SELECT *
 FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths`
@@ -112,17 +115,21 @@ JOIN `coviddeathsvaccinations.CovidVaccinations.CovidVaccinations` as vac
 WHERE dea.continent is not null
 order by 2, 3
 
---Using CTE to find running vaccination percentage by country (first try, something's up with this, won't recognize continent as a name)
+--Using CTE to find running vaccination percentage by country
 
-With PopulationVsVaccination as (select continent, location, date, population, new_vaccinations, cumulative_new_vaccinations)
-(
-SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations, SUM(vac.new_vaccinations) OVER (partition by dea.location ORDER BY dea.location, dea.date) as cumulative_new_vaccinations
+WITH PopulationVsVaccination AS (       
+SELECT 
+    dea.continent, 
+    dea.location, 
+    dea.date, 
+    dea.population, 
+    vac.new_vaccinations, 
+    SUM(vac.new_vaccinations) OVER (partition by dea.location ORDER BY dea.location, dea.date) as cumulative_new_vaccinations
 FROM `coviddeathsvaccinations.CovidDeaths.CovidDeaths` as dea
 JOIN `coviddeathsvaccinations.CovidVaccinations.CovidVaccinations` as vac
     ON dea.location = vac.location
     and dea.date = vac.date
-WHERE dea.continent is not null
-)
+WHERE dea.continent is not null)
 SELECT *, (cumulative_new_vaccinations/population)*100 as cumulative_vaccination_percentage
 FROM PopulationVsVaccination
 
