@@ -1,5 +1,5 @@
---This project is based on global COVID deaths and vaccinations data from Our World In Data, date range February 24, 2020-February 26, 2022.
---View my tableau visualization of some of these queries: https://public.tableau.com/views/COVIDDeathsInfectionsDataendingFeb262022/Dashboard1?:language=en-US&:display_count=n&:origin=viz_share_link
+--This project using BigQuery is based on global COVID deaths and vaccinations data from Our World In Data, date range February 24, 2020-February 26, 2022.
+--View my tableau visualization of some of these queries: https://public.tableau.com/views/GlobalCOVIDDataendingFeb262022/Dashboard1?:language=en-US&:display_count=n&:origin=viz_share_link
 
 --View the two data sets:
 
