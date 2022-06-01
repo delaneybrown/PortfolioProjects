@@ -1,6 +1,7 @@
 --This project uses MySQL to clean a Nashville Housing dataset from Kaggle (https://www.kaggle.com/datasets/tmthyjames/nashville-housing-data)
+--Link to Tableau vizualization of some of this data https://public.tableau.com/views/NashvilleHousingData2013-2016/Dashboard1?:language=en-US&publish=yes&:display_count=n&:origin=viz_share_link
 
--- View the Dataset
+--View the Dataset
 
 SELECT * 
 FROM PortfolioProject.nashvillehousing
