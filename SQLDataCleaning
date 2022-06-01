@@ -1,0 +1,150 @@
+--This project uses MySQL to clean a Nashville Housing dataset from Kaggle (https://www.kaggle.com/datasets/tmthyjames/nashville-housing-data)
+
+-- View the Dataset
+
+SELECT * 
+FROM PortfolioProject.nashvillehousing
+
+--Populate property address data
+--First, find rows with missing property address.
+
+SELECT * 
+FROM PortfolioProject.nashvillehousing
+WHERE PropertyAddress IS NULL
+
+--Join dataset with itself to compare duplicate addresses with unique ID and fill in Property Address nulls
+
+SELECT a.ParcelID, a.PropertyAddress, b.ParcelID, b.PropertyAddress, ISNULL (a. PropertyAddress, b.PropertyAddress)
+FROM PortfolioProject.nashvillehousing as a
+JOIN PortfolioProject.nashvillehousing as b
+	on a.ParcelID = b.ParcelID
+	and a.UniqueID <> b.UniqueID
+WHERE a.PropertyAddress IS NULL
+
+UPDATE a
+SET PropertyAddress = ISNULL (a.PropertyAddress, b.PropertyAddress)
+FROM PortfolioProject.nashvillehousing as a
+JOIN PortfolioProject.nashvillehousing as b
+	on a.ParcelId = b.ParcelId
+	and a.UniqueID <> b.UniqueID
+WHERE a.PropertyAddress IS NULL
+
+--Separating PropertyAddress into street address and city in different columns
+
+SELECT
+SUBSTRING(PropertyAddress, 1, LOCATE(',', PropertyAddress) -1) as Address, SUBSTRING(PropertyAddress, LOCATE(',', PropertyAddress) +1, LEN(PropertyAddress)) as Address
+FROM PortfolioProject.nashvillehousing
+
+ALTER TABLE nashvillehousing
+ADD PropertySplitAddress VARCHAR;
+
+UPDATE nashvillehousing
+SET PropertySplitAddress = SUBSTRING(PropertyAddress, 1, LOCATE(',', PropertyAddress) -1)
+
+ALTER TABLE nashvillehousing
+ADD PropertySplitCity VARCHAR;
+
+UPDATE nashvillehousing
+SET PropertySplitCity = SUBSTRING(PropertyAddress, LOCATE(',', PropertyAddress) +1, LEN(PropertyAddress)) 
+
+--Separating OwnerAddress into street name, city, and state in different columns
+
+SELECT
+SUBSTRING(OwnerAddress, 1, LOCATE(',', OwnerAddress) -1), as StreetAddress
+SUBSTRING(OwnerAddress, LOCATE(',', OwnerAddress) +1, LEN(OwnerAddress) -3), as City
+RIGHT(OwnerAddress, 2) as State; --State is listed as state abbreviation ex: MO instead of Missouri--
+FROM PortfolioProject.nashvillehousing
+
+ALTER TABLE nashvillehousing
+ADD OwnerSplitAddress VARCHAR;
+
+UPDATE nashvillehousing
+SET OwnerSplitAddress = SUBSTRING(OwnerAddress, 1, LOCATE(',', OwnerAddress) -1)
+
+ALTER TABLE nashvillehousing
+ADD OwnerSplitCity VARCHAR;
+
+UPDATE nashvillehousing
+SET OwnerSplitCity = SUBSTRING(OwnerAddress, LOCATE(',', OwnerAddress) +1, LEN(OwnerAddress) -3)
+
+ALTER TABLE nashvillehousing
+ADD OwnerSplitState VARCHAR;
+
+UPDATE nashvillehousing
+SET OwnerSplitState = RIGHT(OwnerAddress, 2)
+
+--2nd way of doing the same thing via SUBSTRING_INDEX
+
+SELECT
+SUBSTRING_INDEX(SUBSTRING_INDEX(OwnerAddress, ',', 1), ',', -1)
+SUBSTRING_INDEX(SUBSTRING_INDEX(OwnerAddress, ',', 2), ',', -1)
+SUBSTRING_INDEX(SUBSTRING_INDEX(OwnerAddress, ',', 3), ',', -1)
+FROM PortfolioProject.nashvillehousing;
+
+ALTER TABLE nashvillehousing
+ADD OwnerSplitAddress VARCHAR;
+
+UPDATE nashvillehousing
+SET OwnerSplitAddress = SUBSTRING_INDEX(SUBSTRING_INDEX(OwnerAddress, ',', 1), ',', -1)
+
+ALTER TABLE nashvillehousing
+ADD OwnerSplitCity VARCHAR;
+
+UPDATE nashvillehousing
+SET OwnerSplitCity = SUBSTRING_INDEX(SUBSTRING_INDEX(OwnerAddress, ',', 2), ',', -1)
+
+ALTER TABLE nashvillehousing
+ADD OwnerSplitState VARCHAR;
+
+UPDATE nashvillehousing
+SET OwnerSplitState = SUBSTRING_INDEX(SUBSTRING_INDEX(OwnerAddress, ',', 3), ',', -1)
+
+--Narrow down SoldAsVacant options to Yes and No
+
+SELECT DISTINCT(SoldAsVacant), COUNT(SoldAsVacant)
+FROM PortfolioProject.nashvillehousing
+Group by SoldAsVacant
+order by 2
+
+SELECT SoldAsVacant,
+CASE 
+	When SoldAsVacant = 'Y' THEN 'Yes'
+	When SoldAsVacant = 'N' THEN 'No'
+	ELSE SoldAsVacant
+	END
+FROM PortfolioProject.nashvillehousing
+
+UPDATE PortfolioProject.nashvillehousing
+SET SoldAsVacant = CASE 
+	When SoldAsVacant = 'Y' THEN 'Yes'
+	When SoldAsVacant = 'N' THEN 'No'
+	ELSE SoldAsVacant
+	END
+	
+--Use CTE to remove duplicate rows
+
+WITH RowNumCTE AS (
+SELECT *,
+	ROW_NUMBER( ) OVER (
+	PARTITION BY 
+		ParcelID,
+		PropertyAddress,
+		SalePrice,
+		SaleDate,
+		LegalReference
+		ORDER BY UniqueID) 
+			row_num
+FROM PortfolioProjet.nashvillehousing)
+
+DELETE --replace with SELECT * to verify deletion of duplicates
+FROM RowNumCTE
+WHERE row_num > 1
+--order by PropertyAddress
+
+--Delete unused columns (columns we previously split)
+
+SELECT *
+FROM PortfolioProject.nashvillehousing
+
+ALTER TABLE PortfolioProject.nashvillehousing
+DROP COLUMN PropertyAddress, OwnerAddress
