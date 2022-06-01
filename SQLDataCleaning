@@ -14,7 +14,7 @@ WHERE PropertyAddress IS NULL
 
 --Join dataset with itself to compare duplicate addresses with unique ID and fill in Property Address nulls
 
-SELECT a.ParcelID, a.PropertyAddress, b.ParcelID, b.PropertyAddress, ISNULL(a. PropertyAddress, b.PropertyAddress)
+SELECT a.ParcelID, a.PropertyAddress, b.ParcelID, b.PropertyAddress, IFNULL(a. PropertyAddress, b.PropertyAddress)
 FROM PortfolioProject.nashvillehousing as a
 JOIN PortfolioProject.nashvillehousing as b
 	on a.ParcelID = b.ParcelID
@@ -22,7 +22,7 @@ JOIN PortfolioProject.nashvillehousing as b
 WHERE a.PropertyAddress IS NULL
 
 UPDATE a
-SET PropertyAddress = ISNULL(a.PropertyAddress, b.PropertyAddress)
+SET PropertyAddress = IFNULL(a.PropertyAddress, b.PropertyAddress)
 FROM PortfolioProject.nashvillehousing as a
 JOIN PortfolioProject.nashvillehousing as b
 	on a.ParcelId = b.ParcelId
